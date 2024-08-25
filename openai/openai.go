@@ -151,7 +151,7 @@ func New(opts ...Option) (*Client, error) {
 // CreateChatCompletion is an API call to create a completion for a chat message.
 func (c *Client) CreateChatCompletion(
 	ctx context.Context,
-	content string,
+	content ...string,
 ) (resp openai.ChatCompletionResponse, err error) {
 	req := openai.ChatCompletionRequest{
 		Model:            c.model,
@@ -163,9 +163,16 @@ func (c *Client) CreateChatCompletion(
 		Messages: []openai.ChatCompletionMessage{
 			{
 				Role:    openai.ChatMessageRoleUser,
-				Content: content,
+				Content: content[0],
 			},
 		},
+	}
+
+	if len(content) > 1 {
+		req.Messages = append(req.Messages, openai.ChatCompletionMessage{
+			Role:    openai.ChatMessageRoleSystem,
+			Content: content[1],
+		})
 	}
 
 	return c.client.CreateChatCompletion(ctx, req)
@@ -198,7 +205,7 @@ func (c *Client) CreateCompletion(
 // and returns a string and an error.
 func (c *Client) Completion(
 	ctx context.Context,
-	content string,
+	content ...string,
 ) (*Response, error) {
 	resp := &Response{}
 	switch c.model {
@@ -228,14 +235,14 @@ func (c *Client) Completion(
 		openai.GPT432K0613,
 		DeepseekChat,
 		DeepseekCoder:
-		r, err := c.CreateChatCompletion(ctx, content)
+		r, err := c.CreateChatCompletion(ctx, content...)
 		if err != nil {
 			return nil, err
 		}
 		resp.Content = r.Choices[0].Message.Content
 		resp.Usage = r.Usage
 	default:
-		r, err := c.CreateCompletion(ctx, content)
+		r, err := c.CreateCompletion(ctx, content[0])
 		if err != nil {
 			return nil, err
 		}

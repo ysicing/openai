@@ -27,4 +27,13 @@ func main() {
 			log.Println("approved")
 		}
 	}
+	resp2, err := client.Completion(context.Background(), "五毛钱一条删除", "这是博客评论, 请帮我检查是否涉及广告、色情、政治等不宜公开的信息, 并且用'yes'或'no'回答:")
+	if err == nil {
+		log.Printf("prompt:%d,completion:%d,total:%d", resp2.Usage.PromptTokens, resp2.Usage.CompletionTokens, resp2.Usage.TotalTokens)
+		if strings.Contains(resp2.Content, "yes") {
+			log.Println("rejected")
+		} else {
+			log.Println("approved")
+		}
+	}
 }
