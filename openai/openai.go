@@ -251,3 +251,82 @@ func (c *Client) Completion(
 	}
 	return resp, nil
 }
+
+// CreateImageChatCompletion is an API call to create a completion for a chat message.
+func (c *Client) CreateImageChatCompletion(
+	ctx context.Context,
+	image string,
+	content ...string,
+) (resp openai.ChatCompletionResponse, err error) {
+	req := openai.ChatCompletionRequest{
+		Model:            c.model,
+		MaxTokens:        c.maxTokens,
+		Temperature:      c.temperature,
+		TopP:             c.topP,
+		FrequencyPenalty: c.frequencyPenalty,
+		PresencePenalty:  c.presencePenalty,
+		Messages: []openai.ChatCompletionMessage{
+			{
+				Role: openai.ChatMessageRoleUser,
+				MultiContent: []openai.ChatMessagePart{
+					{
+						Type: openai.ChatMessagePartTypeText,
+						Text: content[0],
+					},
+					{
+						Type: openai.ChatMessagePartTypeImageURL,
+						ImageURL: &openai.ChatMessageImageURL{
+							URL: image,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	if len(content) > 1 {
+		req.Messages = append(req.Messages, openai.ChatCompletionMessage{
+			Role:    openai.ChatMessageRoleSystem,
+			Content: content[1],
+		})
+	}
+
+	return c.client.CreateChatCompletion(ctx, req)
+}
+
+// ImageCompletion is a method on the Client struct that takes a context.Context and a string argument
+func (c *Client) ImageCompletion(
+	ctx context.Context,
+	image string,
+	content ...string,
+) (*Response, error) {
+	resp := &Response{}
+	switch c.model {
+	case openai.GPT4,
+		openai.GPT4o,
+		openai.GPT4o20240513,
+		openai.GPT4o20240806,
+		openai.GPT4oMini,
+		openai.GPT4oMini20240718,
+		openai.GPT4TurboPreview,
+		openai.GPT4VisionPreview,
+		openai.GPT4Turbo1106,
+		openai.GPT4Turbo0125,
+		openai.GPT4Turbo,
+		openai.GPT4Turbo20240409,
+		openai.GPT40314,
+		openai.GPT40613,
+		openai.GPT432K,
+		openai.GPT432K0314,
+		openai.GPT432K0613:
+		r, err := c.CreateImageChatCompletion(ctx, image, content...)
+		if err != nil {
+			return nil, err
+		}
+		resp.Content = r.Choices[0].Message.Content
+		resp.Usage = r.Usage
+	default:
+		return nil, fmt.Errorf("model %s does not support image completions", c.model)
+	}
+	return resp, nil
+}
