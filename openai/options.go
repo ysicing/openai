@@ -2,17 +2,14 @@ package openai
 
 import (
 	"errors"
-	"log"
 	"time"
 
 	"github.com/sashabaranov/go-openai"
 )
 
 var (
-	errorsMissingToken         = errors.New("please set OPENAI_API_KEY environment variable")
-	errorsMissingModel         = errors.New("missing model")
-	errorsMissingAzureModel    = errors.New("missing Azure deployments model name")
-	errorsMissingDeepseekModel = errors.New("missing Deepseek model name")
+	errorsMissingToken      = errors.New("please set OPENAI_API_KEY environment variable")
+	errorsMissingAzureModel = errors.New("missing Azure deployments model name")
 )
 
 const (
@@ -22,7 +19,7 @@ const (
 )
 
 const (
-	defaultMaxTokens   = 300
+	defaultMaxTokens   = 2000
 	defaultModel       = openai.GPT4oMini
 	defaultTemperature = 1.0
 	defaultProvider    = OPENAI
@@ -222,23 +219,13 @@ func (cfg *config) valid() error {
 		return errorsMissingToken
 	}
 
-	// Check that the model exists in the model maps.
-	modelExists := modelMaps[cfg.model] != ""
-	if !modelExists {
-		return errorsMissingModel
-	}
-
 	// If the provider is Azure, check that the model name is not empty.
 	if cfg.provider == AZURE && cfg.modelName == "" {
 		return errorsMissingAzureModel
 	}
+
 	if cfg.provider == DEEPSEEK {
-		if cfg.model == "" {
-			cfg.model = DeepseekChat
-		} else if cfg.model != DeepseekChat && cfg.model != DeepseekCoder {
-			log.Printf("model name: %s, code: %s, chat: %s", cfg.modelName, DeepseekCoder, DeepseekChat)
-			return errorsMissingDeepseekModel
-		}
+		cfg.model = DeepseekChat
 	}
 
 	// If all checks pass, return nil (no error).

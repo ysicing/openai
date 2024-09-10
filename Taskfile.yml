@@ -1,0 +1,23 @@
+# https://taskfile.dev
+
+version: '3'
+
+tasks:
+  fmt:
+    desc: "fmt code"
+    cmds:
+      - gofmt -s -w .
+      - goimports -w .
+      - gofmt -l .
+
+  lint:
+    desc: "lint code"
+    cmds:
+      - golangci-lint run -v ./...
+
+  default:
+    cmds:
+      - task: fmt
+      - task: lint
+
+

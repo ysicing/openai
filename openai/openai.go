@@ -151,7 +151,8 @@ func New(opts ...Option) (*Client, error) {
 // CreateChatCompletion is an API call to create a completion for a chat message.
 func (c *Client) CreateChatCompletion(
 	ctx context.Context,
-	content ...string,
+	prompt,
+	content string,
 ) (resp openai.ChatCompletionResponse, err error) {
 	req := openai.ChatCompletionRequest{
 		Model:            c.model,
@@ -163,100 +164,56 @@ func (c *Client) CreateChatCompletion(
 		Messages: []openai.ChatCompletionMessage{
 			{
 				Role:    openai.ChatMessageRoleUser,
-				Content: content[0],
+				Content: content,
 			},
 		},
 	}
-
-	if len(content) > 1 {
+	if len(prompt) > 0 {
 		req.Messages = append(req.Messages, openai.ChatCompletionMessage{
 			Role:    openai.ChatMessageRoleSystem,
-			Content: content[1],
+			Content: prompt,
 		})
 	}
-
 	return c.client.CreateChatCompletion(ctx, req)
 }
 
-// CreateCompletion is an API call to create a completion.
-// This is the main endpoint of the API. It returns new text, as well as, if requested,
-// the probabilities over each alternative token at each position.
-//
-// If using a fine-tuned model, simply provide the model's ID in the CompletionRequest object,
-// and the server will use the model's parameters to generate the completion.
-func (c *Client) CreateCompletion(
+// CreateChatCompletionWithMessage is an API call to create a completion for a chat message.
+func (c *Client) CreateChatCompletionWithMessage(
 	ctx context.Context,
-	content string,
-) (resp openai.CompletionResponse, err error) {
-	req := openai.CompletionRequest{
+	messages []openai.ChatCompletionMessage,
+) (resp openai.ChatCompletionResponse, err error) {
+	req := openai.ChatCompletionRequest{
 		Model:            c.model,
 		MaxTokens:        c.maxTokens,
 		Temperature:      c.temperature,
 		TopP:             c.topP,
 		FrequencyPenalty: c.frequencyPenalty,
 		PresencePenalty:  c.presencePenalty,
-		Prompt:           content,
+		Messages:         messages,
 	}
-
-	return c.client.CreateCompletion(ctx, req)
+	return c.client.CreateChatCompletion(ctx, req)
 }
 
 // Completion is a method on the Client struct that takes a context.Context and a string argument
 // and returns a string and an error.
 func (c *Client) Completion(
 	ctx context.Context,
-	content ...string,
+	prompt, content string,
 ) (*Response, error) {
 	resp := &Response{}
-	switch c.model {
-	case openai.GPT3Dot5Turbo,
-		openai.GPT3Dot5Turbo0301,
-		openai.GPT3Dot5Turbo0613,
-		openai.GPT3Dot5Turbo1106,
-		openai.GPT3Dot5Turbo0125,
-		openai.GPT3Dot5Turbo16K,
-		openai.GPT3Dot5Turbo16K0613,
-		openai.GPT4,
-		openai.GPT4o,
-		openai.GPT4o20240513,
-		openai.GPT4o20240806,
-		openai.GPT4oMini,
-		openai.GPT4oMini20240718,
-		openai.GPT4TurboPreview,
-		openai.GPT4VisionPreview,
-		openai.GPT4Turbo1106,
-		openai.GPT4Turbo0125,
-		openai.GPT4Turbo,
-		openai.GPT4Turbo20240409,
-		openai.GPT40314,
-		openai.GPT40613,
-		openai.GPT432K,
-		openai.GPT432K0314,
-		openai.GPT432K0613,
-		DeepseekChat,
-		DeepseekCoder:
-		r, err := c.CreateChatCompletion(ctx, content...)
-		if err != nil {
-			return nil, err
-		}
-		resp.Content = r.Choices[0].Message.Content
-		resp.Usage = r.Usage
-	default:
-		r, err := c.CreateCompletion(ctx, content[0])
-		if err != nil {
-			return nil, err
-		}
-		resp.Content = r.Choices[0].Text
-		resp.Usage = r.Usage
+	r, err := c.CreateChatCompletion(ctx, prompt, content)
+	if err != nil {
+		return nil, err
 	}
+	resp.Content = r.Choices[0].Message.Content
+	resp.Usage = r.Usage
 	return resp, nil
 }
 
 // CreateImageChatCompletion is an API call to create a completion for a chat message.
 func (c *Client) CreateImageChatCompletion(
 	ctx context.Context,
-	image string,
-	content ...string,
+	image, prompt, content string,
 ) (resp openai.ChatCompletionResponse, err error) {
 	req := openai.ChatCompletionRequest{
 		Model:            c.model,
@@ -271,7 +228,7 @@ func (c *Client) CreateImageChatCompletion(
 				MultiContent: []openai.ChatMessagePart{
 					{
 						Type: openai.ChatMessagePartTypeText,
-						Text: content[0],
+						Text: content,
 					},
 					{
 						Type: openai.ChatMessagePartTypeImageURL,
@@ -283,22 +240,19 @@ func (c *Client) CreateImageChatCompletion(
 			},
 		},
 	}
-
-	if len(content) > 1 {
+	if len(prompt) > 0 {
 		req.Messages = append(req.Messages, openai.ChatCompletionMessage{
 			Role:    openai.ChatMessageRoleSystem,
-			Content: content[1],
+			Content: prompt,
 		})
 	}
-
 	return c.client.CreateChatCompletion(ctx, req)
 }
 
 // ImageCompletion is a method on the Client struct that takes a context.Context and a string argument
 func (c *Client) ImageCompletion(
 	ctx context.Context,
-	image string,
-	content ...string,
+	image, prompt, content string,
 ) (*Response, error) {
 	resp := &Response{}
 	switch c.model {
@@ -319,7 +273,7 @@ func (c *Client) ImageCompletion(
 		openai.GPT432K,
 		openai.GPT432K0314,
 		openai.GPT432K0613:
-		r, err := c.CreateImageChatCompletion(ctx, image, content...)
+		r, err := c.CreateImageChatCompletion(ctx, image, prompt, content)
 		if err != nil {
 			return nil, err
 		}
