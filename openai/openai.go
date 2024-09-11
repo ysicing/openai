@@ -14,20 +14,11 @@ import (
 const (
 	DeepseekChat  = "deepseek-chat"
 	DeepseekCoder = "deepseek-coder"
+	ZhiPuGlmFree  = "glm-4-flash"
 )
 
 // DefaultModel is the default OpenAI model to use if one is not provided.
 var DefaultModel = openai.GPT4oMini
-
-// modelMaps maps model names to their corresponding model ID strings.
-var modelMaps = map[string]string{
-	"gpt-4":          openai.GPT4,
-	"gpt-4o-mini":    openai.GPT4oMini,
-	"gpt-4-turbo":    openai.GPT4Turbo,
-	"gpt-3.5-turbo":  openai.GPT3Dot5Turbo,
-	"deepseek-chat":  DeepseekChat,
-	"deepseek-coder": DeepseekCoder,
-}
 
 // Client is a struct that represents an OpenAI client.
 type Client struct {
@@ -67,7 +58,7 @@ func New(opts ...Option) (*Client, error) {
 
 	// Create a new client instance with the necessary fields.
 	engine := &Client{
-		model:       modelMaps[cfg.model],
+		model:       cfg.model,
 		maxTokens:   cfg.maxTokens,
 		temperature: cfg.temperature,
 	}
@@ -114,7 +105,7 @@ func New(opts ...Option) (*Client, error) {
 		// Set the OpenAI client to use the default configuration with Azure-specific options, if the provider is Azure.
 		defaultAzureConfig := openai.DefaultAzureConfig(cfg.token, cfg.baseURL)
 		defaultAzureConfig.AzureModelMapperFunc = func(model string) string {
-			return cfg.modelName
+			return cfg.model
 		}
 		// Set the API version to the one with the specified options.
 		if cfg.apiVersion != "" {
@@ -133,6 +124,17 @@ func New(opts ...Option) (*Client, error) {
 			}
 			if cfg.baseURL == "" {
 				c.BaseURL = "https://api.deepseek.com"
+			}
+			engine.client = openai.NewClientWithConfig(c)
+		}
+	case ZhiPu:
+		{
+			c.HTTPClient = httpClient
+			if cfg.apiVersion != "" {
+				c.APIVersion = cfg.apiVersion
+			}
+			if cfg.baseURL == "" {
+				c.BaseURL = "https://open.bigmodel.cn/api/paas/v4/"
 			}
 			engine.client = openai.NewClientWithConfig(c)
 		}

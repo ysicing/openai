@@ -16,6 +16,7 @@ const (
 	OPENAI   = "openai"
 	AZURE    = "azure"
 	DEEPSEEK = "deepseek"
+	ZhiPu    = "zhipu"
 )
 
 const (
@@ -127,7 +128,7 @@ func WithTemperature(val float32) Option {
 func WithProvider(val string) Option {
 	// Check if `val` is set to `OPENAI` or `AZURE`. If not, set it to the default value.
 	switch val {
-	case OPENAI, AZURE, DEEPSEEK:
+	case OPENAI, AZURE, DEEPSEEK, ZhiPu:
 	default:
 		val = defaultProvider
 	}
@@ -135,15 +136,6 @@ func WithProvider(val string) Option {
 	// Return an `optionFunc` object with `c.provider` set to `val`.
 	return optionFunc(func(c *config) {
 		c.provider = val
-	})
-}
-
-// WithModelName sets the `modelName` variable to the provided `val` parameter.
-// This function returns an `Option` object.
-func WithModelName(val string) Option {
-	// Return an `optionFunc` object with `c.modelName` set to `val`.
-	return optionFunc(func(c *config) {
-		c.modelName = val
 	})
 }
 
@@ -206,7 +198,6 @@ type config struct {
 	frequencyPenalty float32
 
 	provider   string
-	modelName  string
 	skipVerify bool
 	headers    []string
 	apiVersion string
@@ -220,12 +211,16 @@ func (cfg *config) valid() error {
 	}
 
 	// If the provider is Azure, check that the model name is not empty.
-	if cfg.provider == AZURE && cfg.modelName == "" {
+	if cfg.provider == AZURE && cfg.model == "" {
 		return errorsMissingAzureModel
 	}
 
 	if cfg.provider == DEEPSEEK {
 		cfg.model = DeepseekChat
+	}
+
+	if cfg.provider == ZhiPu && len(cfg.model) == 0 {
+		cfg.model = ZhiPuGlmFree
 	}
 
 	// If all checks pass, return nil (no error).
@@ -236,7 +231,6 @@ func (cfg *config) valid() error {
 func newConfig(opts ...Option) *config {
 	// Create a new config object with default values.
 	c := &config{
-		model:       defaultModel,
 		maxTokens:   defaultMaxTokens,
 		temperature: defaultTemperature,
 		provider:    defaultProvider,
