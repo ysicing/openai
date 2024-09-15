@@ -210,19 +210,21 @@ func (cfg *config) valid() error {
 		return errorsMissingToken
 	}
 
-	// If the provider is Azure, check that the model name is not empty.
-	if cfg.provider == AZURE && cfg.model == "" {
-		return errorsMissingAzureModel
-	}
-
 	if cfg.provider == DEEPSEEK {
 		cfg.model = DeepseekChat
+		return nil
 	}
 
-	if cfg.provider == ZhiPu && len(cfg.model) == 0 {
-		cfg.model = ZhiPuGlmFree
+	if cfg.provider == ZhiPu {
+		if len(cfg.model) == 0 {
+			cfg.model = ZhiPuGlmFree
+		}
+		return nil
 	}
 
+	if (cfg.provider == OPENAI || cfg.provider == AZURE) && len(cfg.model) == 0 {
+		cfg.model = defaultModel
+	}
 	// If all checks pass, return nil (no error).
 	return nil
 }

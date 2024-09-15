@@ -119,9 +119,6 @@ func New(opts ...Option) (*Client, error) {
 	case DEEPSEEK:
 		{
 			c.HTTPClient = httpClient
-			if cfg.apiVersion != "" {
-				c.APIVersion = cfg.apiVersion
-			}
 			if cfg.baseURL == "" {
 				c.BaseURL = "https://api.deepseek.com"
 			}
@@ -130,9 +127,6 @@ func New(opts ...Option) (*Client, error) {
 	case ZhiPu:
 		{
 			c.HTTPClient = httpClient
-			if cfg.apiVersion != "" {
-				c.APIVersion = cfg.apiVersion
-			}
 			if cfg.baseURL == "" {
 				c.BaseURL = "https://open.bigmodel.cn/api/paas/v4/"
 			}
@@ -156,6 +150,9 @@ func (c *Client) CreateChatCompletion(
 	prompt,
 	content string,
 ) (resp openai.ChatCompletionResponse, err error) {
+	if len(prompt) > 0 {
+		prompt = "You are a helpful assistant."
+	}
 	req := openai.ChatCompletionRequest{
 		Model:            c.model,
 		MaxTokens:        c.maxTokens,
@@ -165,16 +162,14 @@ func (c *Client) CreateChatCompletion(
 		PresencePenalty:  c.presencePenalty,
 		Messages: []openai.ChatCompletionMessage{
 			{
+				Role:    openai.ChatMessageRoleSystem,
+				Content: prompt,
+			},
+			{
 				Role:    openai.ChatMessageRoleUser,
 				Content: content,
 			},
 		},
-	}
-	if len(prompt) > 0 {
-		req.Messages = append(req.Messages, openai.ChatCompletionMessage{
-			Role:    openai.ChatMessageRoleSystem,
-			Content: prompt,
-		})
 	}
 	return c.client.CreateChatCompletion(ctx, req)
 }
