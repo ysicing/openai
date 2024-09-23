@@ -1,4 +1,4 @@
-github.com/sashabaranov/go-openai v1.30.0 h1:fHv9urGxABfm885xGWsXFSk5cksa+8dJ4jGli/UQQcI=
-github.com/sashabaranov/go-openai v1.30.0/go.mod h1:lj5b/K+zjTSFxVLijLSTDZuP7adOgerWeFyZLUhAKRg=
+github.com/sashabaranov/go-openai v1.30.3 h1:TEdRP3otRXX2A7vLoU+kI5XpoSo7VUUlM/rEttUqgek=
+github.com/sashabaranov/go-openai v1.30.3/go.mod h1:lj5b/K+zjTSFxVLijLSTDZuP7adOgerWeFyZLUhAKRg=
 golang.org/x/net v0.29.0 h1:5ORfpBpCs4HzDYoodCDBbwHzdR5UrLBZ3sOnUJmFoHo=
 golang.org/x/net v0.29.0/go.mod h1:gLkgy8jTGERgjzMic6DS9+SP0ajcu6Xu3Orq/SpETg0=
