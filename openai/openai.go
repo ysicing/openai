@@ -150,7 +150,7 @@ func (c *Client) CreateChatCompletion(
 	prompt,
 	content string,
 ) (resp openai.ChatCompletionResponse, err error) {
-	if len(prompt) > 0 {
+	if len(prompt) == 0 {
 		prompt = "You are a helpful assistant."
 	}
 	req := openai.ChatCompletionRequest{
