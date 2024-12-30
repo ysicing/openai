@@ -13,7 +13,7 @@ import (
 func main() {
 	client, err := openai.New(
 		openai.WithToken(os.Getenv("DEEPSEEK_API")),
-		openai.WithProvider(openai.DEEPSEEK),
+		openai.WithProvider(openai.DeepSeek),
 		openai.WithModel(openai.DeepseekChat),
 	)
 	if err != nil {

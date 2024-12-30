@@ -101,7 +101,7 @@ func New(opts ...Option) (*Client, error) {
 	}
 
 	switch cfg.provider {
-	case AZURE:
+	case Azure:
 		// Set the OpenAI client to use the default configuration with Azure-specific options, if the provider is Azure.
 		defaultAzureConfig := openai.DefaultAzureConfig(cfg.token, cfg.baseURL)
 		defaultAzureConfig.AzureModelMapperFunc = func(model string) string {
@@ -116,7 +116,7 @@ func New(opts ...Option) (*Client, error) {
 		engine.client = openai.NewClientWithConfig(
 			defaultAzureConfig,
 		)
-	case DEEPSEEK:
+	case DeepSeek:
 		{
 			c.HTTPClient = httpClient
 			if cfg.baseURL == "" {

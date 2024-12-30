@@ -8,14 +8,19 @@ import (
 )
 
 var (
-	errorsMissingToken      = errors.New("please set OPENAI_API_KEY environment variable")
-	errorsMissingAzureModel = errors.New("missing Azure deployments model name")
+	errorsMissingToken = errors.New("please set OPENAI_API_KEY environment variable")
 )
 
 const (
-	OPENAI   = "openai"
-	AZURE    = "azure"
+	// DEPRECATED OPENAI is deprecated, use OpenAI instead
+	OPENAI = "openai"
+	OpenAI = "openai"
+	// AZURE is deprecated, use Azure instead
+	AZURE = "azure"
+	Azure = "azure"
+	// DEEPSEEK is deprecated, use DeepSeek instead
 	DEEPSEEK = "deepseek"
+	DeepSeek = "deepseek"
 	ZhiPu    = "zhipu"
 )
 
@@ -23,7 +28,7 @@ const (
 	defaultMaxTokens   = 2000
 	defaultModel       = openai.GPT4oMini
 	defaultTemperature = 1.0
-	defaultProvider    = OPENAI
+	defaultProvider    = OpenAI
 	defaultTopP        = 1.0
 )
 
@@ -123,12 +128,12 @@ func WithTemperature(val float32) Option {
 }
 
 // WithProvider sets the `provider` variable based on the value of the `val` parameter.
-// If `val` is not set to `OPENAI` or `AZURE`, it will be set to the default value `defaultProvider`.
+// If `val` is not set to `OpenAI` or `Azure`, it will be set to the default value `defaultProvider`.
 // This function returns an `Option` object.
 func WithProvider(val string) Option {
-	// Check if `val` is set to `OPENAI` or `AZURE`. If not, set it to the default value.
+	// Check if `val` is set to `OpenAI` or `Azure`. If not, set it to the default value.
 	switch val {
-	case OPENAI, AZURE, DEEPSEEK, ZhiPu:
+	case OpenAI, Azure, DeepSeek, ZhiPu:
 	default:
 		val = defaultProvider
 	}
@@ -210,7 +215,7 @@ func (cfg *config) valid() error {
 		return errorsMissingToken
 	}
 
-	if cfg.provider == DEEPSEEK {
+	if cfg.provider == DEEPSEEK || cfg.provider == DeepSeek {
 		cfg.model = DeepseekChat
 		return nil
 	}
@@ -222,7 +227,7 @@ func (cfg *config) valid() error {
 		return nil
 	}
 
-	if (cfg.provider == OPENAI || cfg.provider == AZURE) && len(cfg.model) == 0 {
+	if (cfg.provider == OpenAI || cfg.provider == Azure) && len(cfg.model) == 0 {
 		cfg.model = defaultModel
 	}
 	// If all checks pass, return nil (no error).
