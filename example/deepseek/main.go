@@ -11,9 +11,11 @@ import (
 )
 
 func main() {
+	// DeepSeek uses OpenAI-compatible API
+	// Use WithBaseURL to specify custom endpoint
 	client, err := openai.New(
 		openai.WithToken(os.Getenv("DEEPSEEK_API")),
-		openai.WithProvider(openai.DeepSeek),
+		openai.WithBaseURL("https://api.deepseek.com/v1"), // Default DeepSeek endpoint
 		openai.WithModel(openai.DeepseekChat),
 	)
 	if err != nil {

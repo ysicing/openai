@@ -3,6 +3,7 @@ package openai
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -12,9 +13,10 @@ import (
 )
 
 const (
-	DeepseekChat  = "deepseek-chat"
-	DeepseekCoder = "deepseek-coder"
-	ZhiPuGlmFree  = "glm-4-flash"
+	// Common model names for convenience
+	// These work with any OpenAI-compatible provider
+	DeepseekChat = "deepseek-chat"
+	ZhiPuGlmFree = "glm-4-flash"
 )
 
 // DefaultModel is the default OpenAI model to use if one is not provided.
@@ -75,6 +77,10 @@ func New(opts ...Option) (*Client, error) {
 	// Create a new HTTP transport.
 	tr := &http.Transport{}
 	if cfg.skipVerify {
+		// WARNING: Disabling TLS certificate verification exposes the client to
+		// man-in-the-middle (MITM) attacks. This should ONLY be used in development
+		// or testing environments. Never use this in production with sensitive data.
+		// Consider using proper certificates instead.
 		tr.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	}
 
@@ -89,7 +95,7 @@ func New(opts ...Option) (*Client, error) {
 	} else if cfg.socksURL != "" {
 		dialer, err := proxy.SOCKS5("tcp", cfg.socksURL, nil, proxy.Direct)
 		if err != nil {
-			return nil, fmt.Errorf("can't connect to the proxy: %s", err)
+			return nil, fmt.Errorf("proxy connection failed: verify SOCKS5 proxy address and network connectivity")
 		}
 		tr.DialContext = dialer.(proxy.ContextDialer).DialContext
 	}
@@ -102,38 +108,20 @@ func New(opts ...Option) (*Client, error) {
 
 	switch cfg.provider {
 	case Azure:
-		// Set the OpenAI client to use the default configuration with Azure-specific options, if the provider is Azure.
+		// Azure OpenAI has special configuration requirements
 		defaultAzureConfig := openai.DefaultAzureConfig(cfg.token, cfg.baseURL)
 		defaultAzureConfig.AzureModelMapperFunc = func(model string) string {
 			return cfg.model
 		}
-		// Set the API version to the one with the specified options.
 		if cfg.apiVersion != "" {
 			defaultAzureConfig.APIVersion = cfg.apiVersion
 		}
-		// Set the HTTP client to the one with the specified options.
 		defaultAzureConfig.HTTPClient = httpClient
-		engine.client = openai.NewClientWithConfig(
-			defaultAzureConfig,
-		)
-	case DeepSeek:
-		{
-			c.HTTPClient = httpClient
-			if cfg.baseURL == "" {
-				c.BaseURL = "https://api.deepseek.com"
-			}
-			engine.client = openai.NewClientWithConfig(c)
-		}
-	case ZhiPu:
-		{
-			c.HTTPClient = httpClient
-			if cfg.baseURL == "" {
-				c.BaseURL = "https://open.bigmodel.cn/api/paas/v4/"
-			}
-			engine.client = openai.NewClientWithConfig(c)
-		}
+		engine.client = openai.NewClientWithConfig(defaultAzureConfig)
+
 	default:
-		// Otherwise, set the OpenAI client to use the HTTP client with the specified options.
+		// Default mode: OpenAI-compatible API
+		// This works for OpenAI, Ollama, DeepSeek, ZhiPu, LM Studio, LocalAI, vLLM, etc.
 		c.HTTPClient = httpClient
 		if cfg.apiVersion != "" {
 			c.APIVersion = cfg.apiVersion
@@ -142,6 +130,22 @@ func New(opts ...Option) (*Client, error) {
 	}
 	// Return the resulting client engine.
 	return engine, nil
+}
+
+// buildChatCompletionRequest creates a standardized chat completion request
+// with common configuration parameters.
+func (c *Client) buildChatCompletionRequest(
+	messages []openai.ChatCompletionMessage,
+) openai.ChatCompletionRequest {
+	return openai.ChatCompletionRequest{
+		Model:            c.model,
+		MaxTokens:        c.maxTokens,
+		Temperature:      c.temperature,
+		TopP:             c.topP,
+		FrequencyPenalty: c.frequencyPenalty,
+		PresencePenalty:  c.presencePenalty,
+		Messages:         messages,
+	}
 }
 
 // CreateChatCompletion is an API call to create a completion for a chat message.
@@ -153,24 +157,18 @@ func (c *Client) CreateChatCompletion(
 	if len(prompt) == 0 {
 		prompt = "You are a helpful assistant."
 	}
-	req := openai.ChatCompletionRequest{
-		Model:            c.model,
-		MaxTokens:        c.maxTokens,
-		Temperature:      c.temperature,
-		TopP:             c.topP,
-		FrequencyPenalty: c.frequencyPenalty,
-		PresencePenalty:  c.presencePenalty,
-		Messages: []openai.ChatCompletionMessage{
-			{
-				Role:    openai.ChatMessageRoleSystem,
-				Content: prompt,
-			},
-			{
-				Role:    openai.ChatMessageRoleUser,
-				Content: content,
-			},
+	messages := []openai.ChatCompletionMessage{
+		{
+			Role:    openai.ChatMessageRoleSystem,
+			Content: prompt,
+		},
+		{
+			Role:    openai.ChatMessageRoleUser,
+			Content: content,
 		},
 	}
+
+	req := c.buildChatCompletionRequest(messages)
 	return c.client.CreateChatCompletion(ctx, req)
 }
 
@@ -179,20 +177,12 @@ func (c *Client) CreateChatCompletionWithMessage(
 	ctx context.Context,
 	messages []openai.ChatCompletionMessage,
 ) (resp openai.ChatCompletionResponse, err error) {
-	req := openai.ChatCompletionRequest{
-		Model:            c.model,
-		MaxTokens:        c.maxTokens,
-		Temperature:      c.temperature,
-		TopP:             c.topP,
-		FrequencyPenalty: c.frequencyPenalty,
-		PresencePenalty:  c.presencePenalty,
-		Messages:         messages,
-	}
+	req := c.buildChatCompletionRequest(messages)
 	return c.client.CreateChatCompletion(ctx, req)
 }
 
 // Completion is a method on the Client struct that takes a context.Context and a string argument
-// and returns a string and an error.
+// and returns a Response and an error.
 func (c *Client) Completion(
 	ctx context.Context,
 	prompt, content string,
@@ -200,84 +190,72 @@ func (c *Client) Completion(
 	resp := &Response{}
 	r, err := c.CreateChatCompletion(ctx, prompt, content)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("chat completion failed: %w", err)
 	}
+
+	// Validate response to prevent panics on empty choices
+	if len(r.Choices) == 0 {
+		return nil, errors.New("empty response from API: no choices returned")
+	}
+
 	resp.Content = r.Choices[0].Message.Content
 	resp.Usage = r.Usage
 	return resp, nil
 }
 
-// CreateImageChatCompletion is an API call to create a completion for a chat message.
+// CreateImageChatCompletion is an API call to create a completion for a chat message with image input.
 func (c *Client) CreateImageChatCompletion(
 	ctx context.Context,
 	image, prompt, content string,
 ) (resp openai.ChatCompletionResponse, err error) {
-	req := openai.ChatCompletionRequest{
-		Model:            c.model,
-		MaxTokens:        c.maxTokens,
-		Temperature:      c.temperature,
-		TopP:             c.topP,
-		FrequencyPenalty: c.frequencyPenalty,
-		PresencePenalty:  c.presencePenalty,
-		Messages: []openai.ChatCompletionMessage{
-			{
-				Role: openai.ChatMessageRoleUser,
-				MultiContent: []openai.ChatMessagePart{
-					{
-						Type: openai.ChatMessagePartTypeText,
-						Text: content,
-					},
-					{
-						Type: openai.ChatMessagePartTypeImageURL,
-						ImageURL: &openai.ChatMessageImageURL{
-							URL: image,
-						},
+	messages := []openai.ChatCompletionMessage{
+		{
+			Role: openai.ChatMessageRoleUser,
+			MultiContent: []openai.ChatMessagePart{
+				{
+					Type: openai.ChatMessagePartTypeText,
+					Text: content,
+				},
+				{
+					Type: openai.ChatMessagePartTypeImageURL,
+					ImageURL: &openai.ChatMessageImageURL{
+						URL: image,
 					},
 				},
 			},
 		},
 	}
 	if len(prompt) > 0 {
-		req.Messages = append(req.Messages, openai.ChatCompletionMessage{
+		messages = append(messages, openai.ChatCompletionMessage{
 			Role:    openai.ChatMessageRoleSystem,
 			Content: prompt,
 		})
 	}
+
+	req := c.buildChatCompletionRequest(messages)
 	return c.client.CreateChatCompletion(ctx, req)
 }
 
-// ImageCompletion is a method on the Client struct that takes a context.Context and a string argument
+// ImageCompletion is a method on the Client struct for image understanding.
+// It sends an image and text prompt to the model and returns the response.
+// This method works with any model that supports image input (e.g., GPT-4V, Claude 3, etc.)
+// The underlying OpenAI client will validate if the model supports image input.
 func (c *Client) ImageCompletion(
 	ctx context.Context,
 	image, prompt, content string,
 ) (*Response, error) {
-	resp := &Response{}
-	switch c.model {
-	case openai.GPT4,
-		openai.GPT4o,
-		openai.GPT4o20240513,
-		openai.GPT4o20240806,
-		openai.GPT4oMini,
-		openai.GPT4oMini20240718,
-		openai.GPT4TurboPreview,
-		openai.GPT4VisionPreview,
-		openai.GPT4Turbo1106,
-		openai.GPT4Turbo0125,
-		openai.GPT4Turbo,
-		openai.GPT4Turbo20240409,
-		openai.GPT40314,
-		openai.GPT40613,
-		openai.GPT432K,
-		openai.GPT432K0314,
-		openai.GPT432K0613:
-		r, err := c.CreateImageChatCompletion(ctx, image, prompt, content)
-		if err != nil {
-			return nil, err
-		}
-		resp.Content = r.Choices[0].Message.Content
-		resp.Usage = r.Usage
-	default:
-		return nil, fmt.Errorf("model %s does not support image completions", c.model)
+	r, err := c.CreateImageChatCompletion(ctx, image, prompt, content)
+	if err != nil {
+		return nil, fmt.Errorf("image chat completion failed: %w", err)
 	}
-	return resp, nil
+
+	// Validate response to prevent panics on empty choices
+	if len(r.Choices) == 0 {
+		return nil, errors.New("empty response from API: no choices returned")
+	}
+
+	return &Response{
+		Content: r.Choices[0].Message.Content,
+		Usage:   r.Usage,
+	}, nil
 }

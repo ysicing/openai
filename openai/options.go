@@ -12,16 +12,8 @@ var (
 )
 
 const (
-	// DEPRECATED OPENAI is deprecated, use OpenAI instead
-	OPENAI = "openai"
 	OpenAI = "openai"
-	// AZURE is deprecated, use Azure instead
-	AZURE = "azure"
-	Azure = "azure"
-	// DEEPSEEK is deprecated, use DeepSeek instead
-	DEEPSEEK = "deepseek"
-	DeepSeek = "deepseek"
-	ZhiPu    = "zhipu"
+	Azure  = "azure"
 )
 
 const (
@@ -128,13 +120,17 @@ func WithTemperature(val float32) Option {
 }
 
 // WithProvider sets the `provider` variable based on the value of the `val` parameter.
-// If `val` is not set to `OpenAI` or `Azure`, it will be set to the default value `defaultProvider`.
+// Only OpenAI and Azure have special configurations. Other providers
+// use the default OpenAI-compatible mode and should use WithBaseURL to specify endpoint.
 // This function returns an `Option` object.
 func WithProvider(val string) Option {
-	// Check if `val` is set to `OpenAI` or `Azure`. If not, set it to the default value.
+	// Only OpenAI and Azure have special configurations
+	// Other providers (Ollama, DeepSeek, ZhiPu, LM Studio, etc.) use default OpenAI-compatible mode
 	switch val {
-	case OpenAI, Azure, DeepSeek, ZhiPu:
+	case OpenAI, Azure:
 	default:
+		// For any other provider, use default OpenAI-compatible mode
+		// User should use WithBaseURL to specify custom endpoint
 		val = defaultProvider
 	}
 
@@ -145,6 +141,13 @@ func WithProvider(val string) Option {
 }
 
 // WithSkipVerify returns a new Option that sets the skipVerify for the client configuration.
+//
+// WARNING: Setting this to true disables TLS certificate verification, which exposes
+// the client to man-in-the-middle (MITM) attacks. This should ONLY be used in
+// development or testing environments with self-signed certificates.
+// NEVER use this in production as it compromises security.
+//
+// Consider using proper CA certificates or updating your system trust store instead.
 func WithSkipVerify(val bool) Option {
 	return optionFunc(func(c *config) {
 		c.skipVerify = val
@@ -215,21 +218,11 @@ func (cfg *config) valid() error {
 		return errorsMissingToken
 	}
 
-	if cfg.provider == DEEPSEEK || cfg.provider == DeepSeek {
-		cfg.model = DeepseekChat
-		return nil
-	}
-
-	if cfg.provider == ZhiPu {
-		if len(cfg.model) == 0 {
-			cfg.model = ZhiPuGlmFree
-		}
-		return nil
-	}
-
+	// Set default model for OpenAI and Azure if not specified
 	if (cfg.provider == OpenAI || cfg.provider == Azure) && len(cfg.model) == 0 {
 		cfg.model = defaultModel
 	}
+
 	// If all checks pass, return nil (no error).
 	return nil
 }

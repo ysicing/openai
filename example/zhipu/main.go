@@ -58,9 +58,12 @@ const sgprompt = `# Role:易经卦象解析专家
 `
 
 func main() {
+	// ZhiPu (智谱) uses OpenAI-compatible API
+	// Use WithBaseURL to specify custom endpoint
 	client, err := openai.New(
 		openai.WithToken(os.Getenv("ZHIPU_API")),
-		openai.WithProvider(openai.ZhiPu),
+		openai.WithBaseURL("https://open.bigmodel.cn/api/paas/v4/"), // Default ZhiPu endpoint
+		openai.WithModel(openai.ZhiPuGlmFree),
 		openai.WithFrequencyPenalty(0),
 		openai.WithPresencePenalty(0),
 		openai.WithTemperature(0.6),
