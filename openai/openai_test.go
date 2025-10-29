@@ -12,7 +12,6 @@ func TestClient_Completion_EmptyResponse(t *testing.T) {
 
 	_ = &Client{
 		model:       "test-model",
-		maxTokens:   100,
 		temperature: 0.7,
 	}
 
@@ -32,7 +31,6 @@ func TestClient_ImageCompletion_EmptyResponse(t *testing.T) {
 
 	_ = &Client{
 		model:       openaisdk.GPT4oMini,
-		maxTokens:   100,
 		temperature: 0.7,
 	}
 
@@ -42,7 +40,6 @@ func TestClient_ImageCompletion_EmptyResponse(t *testing.T) {
 func TestClient_buildChatCompletionRequest(t *testing.T) {
 	client := &Client{
 		model:            "test-model",
-		maxTokens:        500,
 		temperature:      0.8,
 		topP:             0.9,
 		frequencyPenalty: 0.5,
@@ -60,10 +57,6 @@ func TestClient_buildChatCompletionRequest(t *testing.T) {
 
 	if req.Model != "test-model" {
 		t.Errorf("Expected model 'test-model', got '%s'", req.Model)
-	}
-
-	if req.MaxTokens != 500 {
-		t.Errorf("Expected maxTokens 500, got %d", req.MaxTokens)
 	}
 
 	if req.Temperature != 0.8 {
@@ -92,7 +85,6 @@ func TestClient_New(t *testing.T) {
 	client, err := New(
 		WithToken("test-token"),
 		WithModel("test-model"),
-		WithMaxTokens(1000),
 		WithTemperature(0.5),
 	)
 

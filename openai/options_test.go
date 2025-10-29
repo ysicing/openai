@@ -38,26 +38,6 @@ func TestWithModel(t *testing.T) {
 	}
 }
 
-func TestWithMaxTokens(t *testing.T) {
-	// Test with valid value
-	opt := WithMaxTokens(1000)
-	c := &config{}
-	opt.apply(c)
-
-	if c.maxTokens != 1000 {
-		t.Errorf("Expected maxTokens 1000, got %d", c.maxTokens)
-	}
-
-	// Test with zero value (should use default)
-	opt = WithMaxTokens(0)
-	c = &config{}
-	opt.apply(c)
-
-	if c.maxTokens != defaultMaxTokens {
-		t.Errorf("Expected default maxTokens %d, got %d", defaultMaxTokens, c.maxTokens)
-	}
-}
-
 func TestWithTemperature(t *testing.T) {
 	// Test with valid value
 	opt := WithTemperature(0.5)
@@ -271,10 +251,6 @@ func TestNewConfig(t *testing.T) {
 	// Test with no options
 	c := newConfig()
 
-	if c.maxTokens != defaultMaxTokens {
-		t.Errorf("Expected default maxTokens %d, got %d", defaultMaxTokens, c.maxTokens)
-	}
-
 	if c.temperature != defaultTemperature {
 		t.Errorf("Expected default temperature %f, got %f", defaultTemperature, c.temperature)
 	}
@@ -291,7 +267,6 @@ func TestNewConfig(t *testing.T) {
 	c = newConfig(
 		WithToken("test-token"),
 		WithModel("test-model"),
-		WithMaxTokens(500),
 		WithTemperature(0.7),
 		WithProvider("custom-provider"),
 	)
@@ -302,10 +277,6 @@ func TestNewConfig(t *testing.T) {
 
 	if c.model != "test-model" {
 		t.Errorf("Expected model 'test-model', got '%s'", c.model)
-	}
-
-	if c.maxTokens != 500 {
-		t.Errorf("Expected maxTokens 500, got %d", c.maxTokens)
 	}
 
 	if c.temperature != 0.7 {

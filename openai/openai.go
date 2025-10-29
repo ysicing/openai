@@ -26,7 +26,6 @@ var DefaultModel = openai.GPT4oMini
 type Client struct {
 	client      *openai.Client
 	model       string
-	maxTokens   int
 	temperature float32
 
 	// An alternative to sampling with temperature, called nucleus sampling,
@@ -61,7 +60,6 @@ func New(opts ...Option) (*Client, error) {
 	// Create a new client instance with the necessary fields.
 	engine := &Client{
 		model:       cfg.model,
-		maxTokens:   cfg.maxTokens,
 		temperature: cfg.temperature,
 	}
 
@@ -139,7 +137,6 @@ func (c *Client) buildChatCompletionRequest(
 ) openai.ChatCompletionRequest {
 	return openai.ChatCompletionRequest{
 		Model:            c.model,
-		MaxTokens:        c.maxTokens,
 		Temperature:      c.temperature,
 		TopP:             c.topP,
 		FrequencyPenalty: c.frequencyPenalty,

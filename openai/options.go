@@ -17,7 +17,6 @@ const (
 )
 
 const (
-	defaultMaxTokens   = 2000
 	defaultModel       = openai.GPT4oMini
 	defaultTemperature = 1.0
 	defaultProvider    = OpenAI
@@ -91,18 +90,6 @@ func WithBaseURL(val string) Option {
 func WithTimeout(val time.Duration) Option {
 	return optionFunc(func(c *config) {
 		c.timeout = val
-	})
-}
-
-// WithMaxTokens returns a new Option that sets the max tokens for the client configuration.
-// The maximum number of tokens to generate in the chat completion.
-// The total length of input tokens and generated tokens is limited by the model's context length.
-func WithMaxTokens(val int) Option {
-	if val <= 0 {
-		val = defaultMaxTokens
-	}
-	return optionFunc(func(c *config) {
-		c.maxTokens = val
 	})
 }
 
@@ -191,16 +178,15 @@ func WithFrequencyPenalty(val float32) Option {
 
 // config is a struct that stores configuration options for the instrumentation.
 type config struct {
-	baseURL     string
-	token       string
-	orgID       string
-	model       string
-	proxyURL    string
-	socksURL    string
-	timeout     time.Duration
-	maxTokens   int
-	temperature float32
+	baseURL  string
+	token    string
+	orgID    string
+	model    string
+	proxyURL string
+	socksURL string
+	timeout  time.Duration
 
+	temperature      float32
 	topP             float32
 	presencePenalty  float32
 	frequencyPenalty float32
@@ -231,7 +217,6 @@ func (cfg *config) valid() error {
 func newConfig(opts ...Option) *config {
 	// Create a new config object with default values.
 	c := &config{
-		maxTokens:   defaultMaxTokens,
 		temperature: defaultTemperature,
 		provider:    defaultProvider,
 		topP:        defaultTopP,

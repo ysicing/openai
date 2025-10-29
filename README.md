@@ -57,16 +57,6 @@ func main() {
 }
 ```
 
-### Ollama (Local AI)
-```go
-client, err := openai.New(
-    openai.WithToken("ollama"),
-    openai.WithProvider(openai.Ollama),  // 自动配置 localhost:11434
-    openai.WithModel("llama3.1:latest"),
-    openai.WithTimeout(300),  // 本地模型需要更长超时
-)
-```
-
 ### DeepSeek (OpenAI-Compatible)
 ```go
 client, err := openai.New(
@@ -84,13 +74,14 @@ client, err := openai.New(
 | `WithModel` | Model name | `"gpt-4o-mini"` |
 | `WithProvider` | Service provider | `openai.Ollama` |
 | `WithBaseURL` | Custom API endpoint | `"http://localhost:11434/v1"` |
-| `WithMaxTokens` | Maximum output tokens | `2000` |
 | `WithTemperature` | Response creativity (0-2) | `0.7` |
 | `WithTopP` | Nucleus sampling | `0.9` |
 | `WithTimeout` | Request timeout | `60 * time.Second` |
 | `WithProxyURL` | HTTP proxy | `"http://proxy:8080"` |
 | `WithSocksURL` | SOCKS5 proxy | `"socks5://proxy:1080"` |
 | `WithSkipVerify` | Skip TLS verification | `true` ⚠️ |
+
+> It is recommended to prioritize using **WithBaseURL** over **WithProvider**. **WithProvider** has limited support.
 
 ## 📚 Supported Providers
 
